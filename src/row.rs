@@ -1,9 +1,17 @@
 use crate::highlighting;
 use crate::HighlightingOptions;
 use crate::SearchDirection;
+use crate::FileType;
+use crate::treesitter::TreeSitterHighlighter;
 use std::cmp;
 use termion::color;
 use unicode_segmentation::UnicodeSegmentation;
+use std::cell::RefCell;
+
+// Thread-local TreeSitterHighlighter for Org files
+thread_local! {
+    static ORG_HIGHLIGHTER: RefCell<TreeSitterHighlighter> = RefCell::new(TreeSitterHighlighter::new());
+}
 
 #[derive(Default)]
 pub struct Row {
@@ -409,7 +417,14 @@ impl Row {
         opts: &HighlightingOptions,
         word: &Option<String>,
         start_with_comment: bool,
+        file_type: &FileType,
     ) -> bool {
+        // For Org files, use Tree-sitter highlighting
+        if file_type.is_org() {
+            return self.highlight_org(word);
+        }
+        
+        // For other file types, use the existing highlighting logic
         let chars: Vec<char> = self.string.chars().collect();
         if self.is_highlighted && word.is_none() {
             if let Some(hl_type) = self.highlighting.last() {
@@ -458,6 +473,35 @@ impl Row {
         if in_ml_comment && &self.string[self.string.len().saturating_sub(2)..] != "*/" {
             return true;
         }
+        self.is_highlighted = true;
+        false
+    }
+    
+    fn highlight_org(&mut self, word: &Option<String>) -> bool {
+        // Clear current highlighting
+        self.highlighting = Vec::new();
+        
+        // Resize highlighting vector to match the string length
+        self.highlighting.resize(self.string.graphemes(true).count(), highlighting::Type::None);
+        
+        // Use the thread-local TreeSitterHighlighter
+        ORG_HIGHLIGHTER.with(|highlighter| {
+            let mut ts_highlighter = highlighter.borrow_mut();
+            let highlights = ts_highlighter.highlight_text(&self.string);
+            
+            // Apply Tree-sitter highlights
+            for (i, grapheme) in self.string.graphemes(true).enumerate() {
+                if let Some(hl_type) = highlights.get(&i) {
+                    self.highlighting[i] = *hl_type;
+                }
+            }
+        });
+        
+        // Apply additional highlighting for search match if needed
+        if let Some(word) = word {
+            self.highlight_match(word);
+        }
+        
         self.is_highlighted = true;
         false
     }

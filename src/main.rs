@@ -13,6 +13,7 @@ mod filetype;
 mod highlighting;
 mod row;
 mod terminal;
+mod treesitter;
 pub use document::Document;
 use editor::Editor;
 pub use editor::Position;

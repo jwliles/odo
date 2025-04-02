@@ -164,6 +164,7 @@ impl Document {
                 &self.file_type.highlighting_options(),
                 word,
                 start_with_comment,
+                &self.file_type,
             );
         }
     }

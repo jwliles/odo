@@ -14,3 +14,8 @@ categories = ["text-editors", "command-line-utilities"]
 crossterm = "0.28.1"
 termion = "4.0.5"
 unicode-segmentation = "1.12.0"
+tree-sitter = "0.20.10"
+tree-sitter-org = "0.1.0"
+
+[build-dependencies]
+cc = "1.0.83"
