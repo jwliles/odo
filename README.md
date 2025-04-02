@@ -1,14 +1,20 @@
 # Orgonaut
 
-A modal text editor written in Rust, inspired by Vim.
+A standalone Org-mode editor written in Rust, inspired by both Vim and Emacs. Orgonaut provides Org-mode functionality without requiring Emacs while maintaining a modal editing style similar to Vim.
 
 ## Features
 
-- Command and Insert modes
-- Syntax highlighting
+- Command and Insert modes with Vi-like keybindings
+- Org-mode syntax highlighting and functionality:
+  - Headlines with different levels (*, **, ***, etc.)
+  - TODO state tracking (TODO, DONE)
+  - Tags support (e.g., :work:, :personal:)
+  - Code blocks with syntax highlighting
+  - Lists (ordered, unordered, checklists)
 - File operations (open, save)
-- Search functionality
-- Vi-like keybindings
+- Advanced search functionality
+- Agenda views and task management
+- Export capabilities (HTML, Markdown)
 
 ## Usage
 
@@ -57,6 +63,41 @@ This project follows the GitFlow workflow:
 ```
 cargo build --release
 ```
+
+## Org-mode Functionality
+
+Orgonaut implements the core functionality of Emacs Org-mode in a standalone application with a modal editing interface inspired by Vim. Key Org-mode features include:
+
+### Document Structure
+- Headlines with different levels for organizing content
+- Folding/unfolding of sections
+- Properties drawers for metadata
+
+### Task Management
+- TODO keywords for tracking task states
+- Priority markers
+- Deadlines and scheduled dates
+- Tags for categorization
+
+### Content Features
+- Tables with spreadsheet-like calculations
+- Code blocks with syntax highlighting for various languages
+- Links to files, websites, or within the document
+- Lists (ordered, unordered, and checklists)
+
+### Advanced Features
+- Agenda views to see scheduled tasks and deadlines
+- Export functionality to convert Org files to other formats
+- Calendar integration
+- Time tracking
+
+## Why Orgonaut?
+
+Orgonaut aims to bring the power of Org-mode to users who:
+- Prefer Vim-style modal editing
+- Want a lightweight, fast application focused solely on Org-mode
+- Need cross-platform compatibility with modern systems
+- Desire a customizable experience without the complexity of Emacs configuration
 
 ## License
 

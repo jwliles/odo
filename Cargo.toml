@@ -2,12 +2,12 @@
 name = "orgonaut"
 version = "0.2.0"
 edition = "2024"
-description = "A modal text editor written in Rust, inspired by Vim"
+description = "A standalone Org-mode editor written in Rust, inspired by both Vim and Emacs"
 authors = ["Orgonaut Contributors"]
 license = "MIT"
 repository = "https://github.com/jwliles/orgonaut"
 readme = "README.md"
-keywords = ["editor", "text-editor", "vim", "terminal", "modal"]
+keywords = ["org-mode", "emacs", "vim", "outliner", "terminal"]
 categories = ["text-editors", "command-line-utilities"]
 
 [dependencies]
