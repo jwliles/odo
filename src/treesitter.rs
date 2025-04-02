@@ -1,187 +1,195 @@
-use tree_sitter::{Language, Parser, Query, QueryCursor};
-use std::collections::HashMap;
-use std::sync::Once;
-use std::str::FromStr;
-
+use unicode_segmentation::UnicodeSegmentation;
 use crate::highlighting::Type as HighlightType;
 
-extern "C" {
-    fn tree_sitter_org() -> Language;
-}
+// A simple Org-mode highlighter until we fully integrate Tree-sitter
+pub struct OrgHighlighter;
 
-// Ensure we only initialize the language once
-static INIT_ORG: Once = Once::new();
-static mut ORG_LANGUAGE: Option<Language> = None;
-
-// Org-mode node types that we're interested in highlighting
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum OrgNodeType {
-    Headline,
-    TodoKeyword,
-    Tag,
-    ListItem,
-    Bold,
-    Italic,
-    Underline,
-    StrikeThrough,
-    Code,
-    Verbatim,
-    Timestamp,
-    Link,
-    Comment,
-    SrcBlock,
-    ExampleBlock,
-    QuoteBlock,
-    Priority,
-    SpecialBlock,
-    Unknown,
-}
-
-impl FromStr for OrgNodeType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "headline" => Ok(OrgNodeType::Headline),
-            "todo_keyword" => Ok(OrgNodeType::TodoKeyword),
-            "tag" => Ok(OrgNodeType::Tag),
-            "list_item" => Ok(OrgNodeType::ListItem),
-            "bold" => Ok(OrgNodeType::Bold),
-            "italic" => Ok(OrgNodeType::Italic),
-            "underline" => Ok(OrgNodeType::Underline),
-            "strikethrough" => Ok(OrgNodeType::StrikeThrough),
-            "code" => Ok(OrgNodeType::Code),
-            "verbatim" => Ok(OrgNodeType::Verbatim),
-            "timestamp" => Ok(OrgNodeType::Timestamp),
-            "link" => Ok(OrgNodeType::Link),
-            "comment" => Ok(OrgNodeType::Comment),
-            "src_block" => Ok(OrgNodeType::SrcBlock),
-            "example_block" => Ok(OrgNodeType::ExampleBlock),
-            "quote_block" => Ok(OrgNodeType::QuoteBlock),
-            "priority" => Ok(OrgNodeType::Priority),
-            "special_block" => Ok(OrgNodeType::SpecialBlock),
-            _ => Ok(OrgNodeType::Unknown),
-        }
-    }
-}
-
-impl OrgNodeType {
-    // Map Org-mode node types to our editor's highlighting types
-    pub fn to_highlight_type(&self) -> HighlightType {
-        match self {
-            OrgNodeType::Headline => HighlightType::PrimaryKeywords,
-            OrgNodeType::TodoKeyword => HighlightType::SecondaryKeywords,
-            OrgNodeType::Tag => HighlightType::Character,
-            OrgNodeType::ListItem => HighlightType::Number,
-            OrgNodeType::Bold => HighlightType::Number,
-            OrgNodeType::Italic => HighlightType::String,
-            OrgNodeType::Underline => HighlightType::Character,
-            OrgNodeType::StrikeThrough => HighlightType::MultilineComment,
-            OrgNodeType::Code => HighlightType::String,
-            OrgNodeType::Verbatim => HighlightType::String,
-            OrgNodeType::Timestamp => HighlightType::Number,
-            OrgNodeType::Link => HighlightType::Character,
-            OrgNodeType::Comment => HighlightType::Comment,
-            OrgNodeType::SrcBlock => HighlightType::String,
-            OrgNodeType::ExampleBlock => HighlightType::String,
-            OrgNodeType::QuoteBlock => HighlightType::MultilineComment,
-            OrgNodeType::Priority => HighlightType::SecondaryKeywords,
-            OrgNodeType::SpecialBlock => HighlightType::Character,
-            OrgNodeType::Unknown => HighlightType::None,
-        }
-    }
-}
-
-pub struct TreeSitterHighlighter {
-    parser: Parser,
-    org_query: Query,
-}
-
-impl TreeSitterHighlighter {
+impl OrgHighlighter {
     pub fn new() -> Self {
-        // Initialize the Org language
-        INIT_ORG.call_once(|| {
-            unsafe {
-                ORG_LANGUAGE = Some(tree_sitter_org());
-            }
-        });
-
-        let language = unsafe { ORG_LANGUAGE.unwrap() };
-        
-        // Create a parser
-        let mut parser = Parser::new();
-        parser.set_language(language).expect("Error setting language");
-
-        // Query to capture nodes we want to highlight
-        let query_source = r#"
-            (headline) @headline
-            (todo_keyword) @todo_keyword
-            (tag) @tag
-            (list_item) @list_item
-            (bold) @bold
-            (italic) @italic
-            (underline) @underline
-            (strikethrough) @strikethrough
-            (code) @code
-            (verbatim) @verbatim
-            (timestamp) @timestamp
-            (link) @link
-            (comment) @comment
-            (src_block) @src_block
-            (example_block) @example_block
-            (quote_block) @quote_block
-            (priority) @priority
-            (special_block) @special_block
-        "#;
-
-        let org_query = Query::new(language, query_source).expect("Error creating query");
-
-        Self {
-            parser,
-            org_query,
-        }
+        Self
     }
-
-    pub fn highlight_text(&mut self, text: &str) -> HashMap<usize, HighlightType> {
-        let mut result = HashMap::new();
+    
+    pub fn highlight_line(&self, line: &str) -> Vec<HighlightType> {
+        let graphemes: Vec<&str> = line.graphemes(true).collect();
+        let mut result = vec![HighlightType::None; graphemes.len()];
         
-        // Parse the text
-        let tree = self.parser.parse(text, None).expect("Failed to parse text");
-        let root_node = tree.root_node();
-        
-        // Use query to find nodes to highlight
-        let mut query_cursor = QueryCursor::new();
-        let matches = query_cursor.matches(&self.org_query, root_node, text.as_bytes());
-        
-        for match_ in matches {
-            for capture in match_.captures {
-                let node = capture.node;
-                let capture_name = self.org_query.capture_names()[capture.index as usize];
-                let node_type = OrgNodeType::from_str(capture_name).unwrap_or(OrgNodeType::Unknown);
-                let highlight_type = node_type.to_highlight_type();
-                
-                // Get the byte range of the node
-                let start_byte = node.start_byte();
-                let end_byte = node.end_byte();
-                
-                // Convert byte positions to character indices and store highlight type
-                // Note: This is a simplified approach. In a real implementation,
-                // you'd need to convert byte positions to grapheme cluster indices.
-                let mut byte_idx = start_byte;
-                while byte_idx < end_byte {
-                    if let Some(c) = text.as_bytes().get(byte_idx) {
-                        // Skip continuation bytes in UTF-8
-                        if (*c & 0xC0) != 0x80 {
-                            result.insert(byte_idx, highlight_type);
+        // Check for headline markers (* at beginning of line)
+        if line.starts_with('*') {
+            let mut i = 0;
+            // Highlight heading stars
+            while i < graphemes.len() && graphemes[i] == "*" {
+                result[i] = HighlightType::PrimaryKeywords;
+                i += 1;
+            }
+            
+            // Skip whitespace
+            while i < graphemes.len() && graphemes[i].trim().is_empty() {
+                i += 1;
+            }
+            
+            // Check for TODO keywords
+            if i < graphemes.len() {
+                let rest = &line[i..];
+                if rest.starts_with("TODO ") {
+                    for _ in 0..4 { // "TODO" length
+                        if i < graphemes.len() {
+                            result[i] = HighlightType::SecondaryKeywords;
+                            i += 1;
                         }
-                        byte_idx += 1;
-                    } else {
-                        break;
+                    }
+                } else if rest.starts_with("DONE ") {
+                    for _ in 0..4 { // "DONE" length
+                        if i < graphemes.len() {
+                            result[i] = HighlightType::SecondaryKeywords;
+                            i += 1;
+                        }
+                    }
+                }
+            }
+            
+            // If tags present at end of line [:tag:], highlight them
+            let _tag_pattern = ":[a-zA-Z0-9_]+:";
+            if let Some(tag_index) = line.find(':') {
+                if tag_index > 0 && line[tag_index..].contains(':') {
+                    // Simple check for tag-like pattern
+                    for (j, _) in graphemes.iter().enumerate().skip(tag_index) {
+                        if j < graphemes.len() {
+                            result[j] = HighlightType::Character;
+                        }
                     }
                 }
             }
         }
         
+        // Check for Org markup
+        self.highlight_markup(line, &mut result, &graphemes);
+        
+        // Check for list items
+        if line.trim().starts_with("- ") {
+            let list_prefix_len = line.find("- ").unwrap() + 2;
+            for i in 0..list_prefix_len {
+                if i < graphemes.len() {
+                    result[i] = HighlightType::Number;
+                }
+            }
+        }
+        
+        // Check for checkboxes [X] or [ ]
+        if line.contains("[ ]") || line.contains("[X]") {
+            let checkbox_pattern = if line.contains("[ ]") { "[ ]" } else { "[X]" };
+            if let Some(checkbox_index) = line.find(checkbox_pattern) {
+                for i in checkbox_index..(checkbox_index + 3) {
+                    if i < graphemes.len() {
+                        result[i] = HighlightType::SecondaryKeywords;
+                    }
+                }
+            }
+        }
+        
+        // Check for Org special lines (#+KEYWORD:)
+        if line.starts_with("#+") {
+            let keyword_end = line.find(':').unwrap_or(line.len());
+            for i in 0..keyword_end + 1 {
+                if i < graphemes.len() {
+                    result[i] = HighlightType::SecondaryKeywords;
+                }
+            }
+        }
+        
+        // Check for source blocks
+        if line.starts_with("#+BEGIN_SRC") || line.starts_with("#+END_SRC") {
+            for i in 0..line.len() {
+                if i < graphemes.len() {
+                    result[i] = HighlightType::String;
+                }
+            }
+        }
+        
+        // Check for comment lines
+        if line.starts_with("#") && !line.starts_with("#+") {
+            for i in 0..line.len() {
+                if i < graphemes.len() {
+                    result[i] = HighlightType::Comment;
+                }
+            }
+        }
+        
         result
+    }
+    
+    fn highlight_markup(&self, line: &str, result: &mut Vec<HighlightType>, graphemes: &[&str]) {
+        // Bold: *bold*
+        self.highlight_pattern_pairs(line, result, graphemes, "*", "*", HighlightType::Number);
+        
+        // Italic: /italic/
+        self.highlight_pattern_pairs(line, result, graphemes, "/", "/", HighlightType::String);
+        
+        // Underline: _underline_
+        self.highlight_pattern_pairs(line, result, graphemes, "_", "_", HighlightType::Character);
+        
+        // Strikethrough: +strikethrough+
+        self.highlight_pattern_pairs(line, result, graphemes, "+", "+", HighlightType::MultilineComment);
+        
+        // Code: ~code~
+        self.highlight_pattern_pairs(line, result, graphemes, "~", "~", HighlightType::String);
+        
+        // Verbatim: =verbatim=
+        self.highlight_pattern_pairs(line, result, graphemes, "=", "=", HighlightType::String);
+        
+        // Links: [[link][description]]
+        if line.contains("[[") && line.contains("]]") {
+            let mut i = 0;
+            while i < line.len() {
+                if i + 1 < line.len() && &line[i..i+2] == "[[" {
+                    let link_start = i;
+                    if let Some(link_end) = line[i..].find("]]") {
+                        let link_end = i + link_end + 2;
+                        for j in link_start..link_end {
+                            if j < graphemes.len() {
+                                result[j] = HighlightType::Character;
+                            }
+                        }
+                        i = link_end;
+                        continue;
+                    }
+                }
+                i += 1;
+            }
+        }
+    }
+    
+    fn highlight_pattern_pairs(
+        &self, 
+        line: &str, 
+        result: &mut Vec<HighlightType>, 
+        graphemes: &[&str],
+        start_pattern: &str,
+        end_pattern: &str,
+        highlight_type: HighlightType
+    ) {
+        let mut i = 0;
+        while i < line.len() {
+            if i + start_pattern.len() <= line.len() && &line[i..i+start_pattern.len()] == start_pattern {
+                let marker_start = i;
+                i += start_pattern.len();
+                
+                if let Some(remaining) = line.get(i..) {
+                    if let Some(end_idx) = remaining.find(end_pattern) {
+                        let end_idx = i + end_idx;
+                        
+                        // Highlight everything including the markers
+                        for j in marker_start..end_idx + end_pattern.len() {
+                            if j < graphemes.len() {
+                                result[j] = highlight_type;
+                            }
+                        }
+                        
+                        i = end_idx + end_pattern.len();
+                        continue;
+                    }
+                }
+            }
+            i += 1;
+        }
     }
 }

@@ -2,16 +2,14 @@ use crate::highlighting;
 use crate::HighlightingOptions;
 use crate::SearchDirection;
 use crate::FileType;
-use crate::treesitter::TreeSitterHighlighter;
+use crate::treesitter::OrgHighlighter;
 use std::cmp;
 use termion::color;
 use unicode_segmentation::UnicodeSegmentation;
-use std::cell::RefCell;
+use std::sync::OnceLock;
 
-// Thread-local TreeSitterHighlighter for Org files
-thread_local! {
-    static ORG_HIGHLIGHTER: RefCell<TreeSitterHighlighter> = RefCell::new(TreeSitterHighlighter::new());
-}
+// Global static OrgHighlighter
+static ORG_HIGHLIGHTER: OnceLock<OrgHighlighter> = OnceLock::new();
 
 #[derive(Default)]
 pub struct Row {
@@ -478,29 +476,14 @@ impl Row {
     }
     
     fn highlight_org(&mut self, word: &Option<String>) -> bool {
-        // Clear current highlighting
-        self.highlighting = Vec::new();
+        // Get or initialize the OrgHighlighter
+        let highlighter = ORG_HIGHLIGHTER.get_or_init(|| OrgHighlighter::new());
         
-        // Resize highlighting vector to match the string length
-        self.highlighting.resize(self.string.graphemes(true).count(), highlighting::Type::None);
-        
-        // Use the thread-local TreeSitterHighlighter
-        ORG_HIGHLIGHTER.with(|highlighter| {
-            let mut ts_highlighter = highlighter.borrow_mut();
-            let highlights = ts_highlighter.highlight_text(&self.string);
-            
-            // Apply Tree-sitter highlights
-            for (i, grapheme) in self.string.graphemes(true).enumerate() {
-                if let Some(hl_type) = highlights.get(&i) {
-                    self.highlighting[i] = *hl_type;
-                }
-            }
-        });
+        // Use the OrgHighlighter to highlight the line
+        self.highlighting = highlighter.highlight_line(&self.string);
         
         // Apply additional highlighting for search match if needed
-        if let Some(word) = word {
-            self.highlight_match(word);
-        }
+        self.highlight_match(word);
         
         self.is_highlighted = true;
         false

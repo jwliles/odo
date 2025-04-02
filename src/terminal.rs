@@ -34,11 +34,11 @@ impl Terminal {
 
     #[allow(clippy::cast_possible_truncation)]
     pub fn cursor_position(position: &Position) {
-        let Position { mut x, mut y } = position;
-        x = x.saturating_add(1);
-        y = y.saturating_add(1);
-        let x = x as u16;
-        let y = y as u16;
+        let &Position { x: mut x_val, y: mut y_val } = position;
+        x_val = x_val.saturating_add(1);
+        y_val = y_val.saturating_add(1);
+        let x = x_val as u16;
+        let y = y_val as u16;
         print!("{}", termion::cursor::Goto(x, y));
     }
     pub fn flush() -> Result<(), std::io::Error> {
