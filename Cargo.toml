@@ -1,11 +1,11 @@
 [package]
 name = "orgonaut"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 description = "A modal text editor written in Rust, inspired by Vim"
 authors = ["Orgonaut Contributors"]
 license = "MIT"
-repository = "https://github.com/orgonaut/orgonaut"
+repository = "https://github.com/jwliles/orgonaut"
 readme = "README.md"
 keywords = ["editor", "text-editor", "vim", "terminal", "modal"]
 categories = ["text-editors", "command-line-utilities"]
