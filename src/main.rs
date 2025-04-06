@@ -7,22 +7,28 @@
     clippy::wildcard_enum_match_arm,
     clippy::else_if_without_else
 )]
-mod document;
+
+mod core;
 mod editor;
-mod filetype;
-mod highlighting;
-mod row;
-mod terminal;
-mod treesitter;
-pub use document::Document;
-use editor::Editor;
-pub use editor::Position;
-pub use editor::SearchDirection;
-pub use filetype::FileType;
-pub use filetype::HighlightingOptions;
-pub use row::Row;
-pub use terminal::Terminal;
+mod ui;
+
+use ui::terminal::TerminalEditor;
+use std::env;
 
 fn main() {
-    Editor::default().run();
+    // Parse command line arguments
+    let args: Vec<String> = env::args().collect();
+    
+    // For now we only support terminal UI 
+    // In the future, we will parse args to determine the UI to use
+    let use_gui = false;
+    
+    if use_gui {
+        // GUI implementation will go here
+        println!("GUI mode not yet implemented");
+    } else {
+        // Terminal UI
+        let mut editor = TerminalEditor::default();
+        editor.run();
+    }
 }

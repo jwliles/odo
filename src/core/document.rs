@@ -1,7 +1,4 @@
-use crate::FileType;
-use crate::Position;
-use crate::Row;
-use crate::SearchDirection;
+use crate::core::{FileType, Position, Row, SearchDirection};
 use std::fs;
 use std::io::{Error, Write};
 

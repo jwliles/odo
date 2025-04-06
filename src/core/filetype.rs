@@ -1,10 +1,3 @@
-pub struct FileType {
-    name: String,
-    hl_opts: HighlightingOptions,
-    is_org: bool,
-}
-
-#[derive(Default)]
 pub struct HighlightingOptions {
     numbers: bool,
     strings: bool,
@@ -15,12 +8,54 @@ pub struct HighlightingOptions {
     secondary_keywords: Vec<String>,
 }
 
+impl Default for HighlightingOptions {
+    fn default() -> Self {
+        Self {
+            numbers: true,
+            strings: true,
+            characters: true,
+            comments: true,
+            multiline_comments: true,
+            primary_keywords: Vec::new(),
+            secondary_keywords: Vec::new(),
+        }
+    }
+}
+
+impl HighlightingOptions {
+    pub fn numbers(&self) -> bool {
+        self.numbers
+    }
+    pub fn strings(&self) -> bool {
+        self.strings
+    }
+    pub fn characters(&self) -> bool {
+        self.characters
+    }
+    pub fn comments(&self) -> bool {
+        self.comments
+    }
+    pub fn multiline_comments(&self) -> bool {
+        self.multiline_comments
+    }
+    pub fn primary_keywords(&self) -> &Vec<String> {
+        &self.primary_keywords
+    }
+    pub fn secondary_keywords(&self) -> &Vec<String> {
+        &self.secondary_keywords
+    }
+}
+
+pub struct FileType {
+    name: String,
+    highlighting_options: HighlightingOptions,
+}
+
 impl Default for FileType {
     fn default() -> Self {
         Self {
             name: String::from("No filetype"),
-            hl_opts: HighlightingOptions::default(),
-            is_org: false,
+            highlighting_options: HighlightingOptions::default(),
         }
     }
 }
@@ -29,17 +64,20 @@ impl FileType {
     pub fn name(&self) -> String {
         self.name.clone()
     }
+    
     pub fn highlighting_options(&self) -> &HighlightingOptions {
-        &self.hl_opts
+        &self.highlighting_options
     }
+    
     pub fn is_org(&self) -> bool {
-        self.is_org
+        self.name == "org"
     }
+    
     pub fn from(file_name: &str) -> Self {
         if file_name.ends_with(".rs") {
             return Self {
-                name: String::from("Rust"),
-                hl_opts: HighlightingOptions {
+                name: String::from("rust"),
+                highlighting_options: HighlightingOptions {
                     numbers: true,
                     strings: true,
                     characters: true,
@@ -115,68 +153,37 @@ impl FileType {
                         "f64".to_string(),
                     ],
                 },
-                is_org: false,
             };
         } else if file_name.ends_with(".org") {
             return Self {
-                name: String::from("Org"),
-                hl_opts: HighlightingOptions {
+                name: String::from("org"),
+                highlighting_options: HighlightingOptions {
                     numbers: true,
                     strings: true,
                     characters: true,
                     comments: true,
                     multiline_comments: true,
                     primary_keywords: vec![
-                        // Org heading markers
-                        "*".to_string(),
-                        "**".to_string(),
-                        "***".to_string(),
-                        "****".to_string(),
-                        "*****".to_string(),
-                        "******".to_string(),
-                    ],
-                    secondary_keywords: vec![
-                        // TODO keywords
                         "TODO".to_string(),
                         "DONE".to_string(),
+                        "STARTED".to_string(),
                         "WAITING".to_string(),
-                        "CANCELLED".to_string(),
-                        "IN-PROGRESS".to_string(),
-                        // Special keywords
+                        "CANCELED".to_string(),
+                    ],
+                    secondary_keywords: vec![
                         "#+TITLE:".to_string(),
                         "#+AUTHOR:".to_string(),
                         "#+DATE:".to_string(),
+                        "#+OPTIONS:".to_string(),
                         "#+BEGIN_SRC".to_string(),
                         "#+END_SRC".to_string(),
+                        "#+BEGIN_EXAMPLE".to_string(),
+                        "#+END_EXAMPLE".to_string(),
                     ],
                 },
-                is_org: true,
             };
         }
-        Self::default()
-    }
-}
 
-impl HighlightingOptions {
-    pub fn numbers(&self) -> bool {
-        self.numbers
-    }
-    pub fn strings(&self) -> bool {
-        self.strings
-    }
-    pub fn characters(&self) -> bool {
-        self.characters
-    }
-    pub fn comments(&self) -> bool {
-        self.comments
-    }
-    pub fn primary_keywords(&self) -> &Vec<String> {
-        &self.primary_keywords
-    }
-    pub fn secondary_keywords(&self) -> &Vec<String> {
-        &self.secondary_keywords
-    }
-    pub fn multiline_comments(&self) -> bool {
-        self.multiline_comments
+        Self::default()
     }
 }
