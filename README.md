@@ -1,6 +1,6 @@
-# Orgonaut
+# NeoOrg
 
-A standalone Org-mode editor written in Rust, inspired by both Vim and Emacs. Orgonaut provides Org-mode functionality without requiring Emacs while maintaining a modal editing style similar to Vim.
+A standalone Org-mode editor written in Rust, inspired by both Vim and Emacs. NeoOrg provides Org-mode functionality without requiring Emacs while maintaining a modal editing style similar to Vim.
 
 ## Features
 
@@ -37,6 +37,7 @@ cargo run [filename]
 - `PageUp`/`PageDown` - Move up/down by one screen
 - `Ctrl-f` - Search text
 - `Ctrl-s` - Save file
+- `Ctrl-o` - Open file
 - `Ctrl-q` - Quit (press multiple times if file has unsaved changes)
 
 **Insert Mode:**
@@ -46,6 +47,7 @@ cargo run [filename]
 - `Delete` - Delete character under cursor
 - Arrow keys - Move cursor
 - `Ctrl-s` - Save file
+- `Ctrl-o` - Open file
 - `Ctrl-q` - Quit (press multiple times if file has unsaved changes)
 
 ## Development
@@ -66,7 +68,7 @@ cargo build --release
 
 ## Org-mode Functionality
 
-Orgonaut implements the core functionality of Emacs Org-mode in a standalone application with a modal editing interface inspired by Vim. Key Org-mode features include:
+NeoOrg implements the core functionality of Emacs Org-mode in a standalone application with a modal editing interface inspired by Vim. Key Org-mode features include:
 
 ### Document Structure
 - Headlines with different levels for organizing content
@@ -91,9 +93,9 @@ Orgonaut implements the core functionality of Emacs Org-mode in a standalone app
 - Calendar integration
 - Time tracking
 
-## Why Orgonaut?
+## Why NeoOrg?
 
-Orgonaut aims to bring the power of Org-mode to users who:
+NeoOrg aims to bring the power of Org-mode to users who:
 - Prefer Vim-style modal editing
 - Want a lightweight, fast application focused solely on Org-mode
 - Need cross-platform compatibility with modern systems

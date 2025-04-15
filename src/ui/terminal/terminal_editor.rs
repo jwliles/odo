@@ -26,7 +26,7 @@ impl Default for TerminalEditor {
     fn default() -> Self {
         let args: Vec<String> = env::args().collect();
         let mut initial_status =
-            String::from("COMMAND MODE: i=insert | a=append | Ctrl-F=find | Ctrl-S=save | Ctrl-Q=quit");
+            String::from("COMMAND MODE: i=insert | a=append | Ctrl-F=find | Ctrl-S=save | Ctrl-O=open | Ctrl-Q=quit");
 
         let document = if let Some(file_name) = args.get(1) {
             let doc = Document::open(file_name);
@@ -179,7 +179,7 @@ impl TerminalEditor {
     }
 
     fn draw_welcome_message(&self) {
-        let mut welcome_message = format!("Orgonaut editor -- version {}", VERSION);
+        let mut welcome_message = format!("NeoOrg editor -- version {}", VERSION);
         let width = self.terminal.size().width as usize;
         let len = welcome_message.len();
         #[allow(clippy::integer_arithmetic, clippy::integer_division)]
@@ -273,6 +273,30 @@ impl EditorInterface for TerminalEditor {
                     }
                     Key::Ctrl('s') => self.save_document()?,
                     Key::Ctrl('f') => { self.search_document(); }
+                    Key::Ctrl('o') => {
+                        // Prompt for filename and open document
+                        if self.document.is_dirty() {
+                            self.status_message = StatusMessage::from(
+                                "WARNING! Current file has unsaved changes.".to_string()
+                            );
+                            let response = self.prompt("Open new file anyway? (y/n): ", |_, _, _| {}).unwrap_or(None);
+                            if response.is_none() || response.unwrap().to_lowercase() != "y" {
+                                self.status_message = StatusMessage::from("Open aborted.".to_string());
+                                return Ok(());
+                            }
+                        }
+
+                        let filename = self.prompt("Open file: ", |_, _, _| {}).unwrap_or(None);
+                        if let Some(filename) = filename {
+                            if let Err(e) = self.open_document(&filename) {
+                                self.status_message = StatusMessage::from(format!("Error opening file: {}", e));
+                            } else {
+                                self.status_message = StatusMessage::from(format!("Opened file: {}", filename));
+                                self.cursor_position = Position::default();
+                                self.offset = Position::default();
+                            }
+                        }
+                    }
                     Key::Char('i') => self.enter_insert_mode(),
                     Key::Char('a') => {
                         // Move cursor right then enter insert mode (append)
@@ -334,6 +358,12 @@ impl EditorInterface for TerminalEditor {
                         self.should_quit = true
                     }
                     Key::Ctrl('s') => self.save_document()?,
+                    Key::Ctrl('o') => {
+                        // Force command mode and then process the open command
+                        self.enter_command_mode();
+                        self.process_keypress()?;
+                        self.enter_insert_mode();
+                    },
                     Key::Char(c) => {
                         self.document.insert(&self.cursor_position, c);
                         self.move_cursor(Key::Right);
@@ -430,28 +460,64 @@ impl EditorInterface for TerminalEditor {
         let mut direction = SearchDirection::Forward;
         let query = self
             .prompt(
-                "Search (ESC to cancel, Arrows to navigate): ",
+                "Search (ESC to cancel, ↓/j/n=next, ↑/k/p=prev): ",
                 |editor, key, query| {
                     let mut moved = false;
+                    // Handle key presses for navigation within search
+                    let was_empty = query.is_empty();
+                    
                     match key {
-                        'k' | 'j' => {
+                        'n' | 'j' | 'd' | 'l' => {
                             direction = SearchDirection::Forward;
                             moved = true;
                         }
-                        'h' | 'i' => direction = SearchDirection::Backward,
-                        _ => direction = SearchDirection::Forward,
+                        'p' | 'k' | 'a' | 'h' => {
+                            direction = SearchDirection::Backward;
+                            moved = true;
+                        }
+                        _ => {
+                            // For other keys, if this is a new character being typed,
+                            // we want to search from the current position forward
+                            if !was_empty && !query.is_empty() {
+                                direction = SearchDirection::Forward;
+                                moved = true;
+                            }
+                        }
                     }
-                    if let Some(position) =
-                        editor
-                            .document
-                            .find(&query, &editor.cursor_position, direction)
-                    {
-                        editor.cursor_position = position;
-                        editor.scroll();
-                    } else if moved {
-                        // Handle case where moved but no match found
+                    // Only search if query is not empty
+                    if !query.is_empty() {
+                        if let Some(position) =
+                            editor
+                                .document
+                                .find(&query, &editor.cursor_position, direction)
+                        {
+                            editor.cursor_position = position;
+                            editor.scroll();
+                        } else if moved {
+                            // If we're moving to next/prev but no results found, wrap around
+                            let position = if direction == SearchDirection::Forward {
+                                // If searching forward and not found, start from beginning
+                                Position { x: 0, y: 0 }
+                            } else {
+                                // If searching backward and not found, start from end
+                                let y = editor.document.len().saturating_sub(1);
+                                let x = editor.document.row(y).map_or(0, |r| r.len());
+                                Position { x, y }
+                            };
+                            
+                            // Try one more search from the wrapped-around position
+                            if let Some(new_position) = editor.document.find(&query, &position, direction) {
+                                editor.cursor_position = new_position;
+                                editor.scroll();
+                                editor.status_message = StatusMessage::from("Search wrapped around".to_string());
+                            } else {
+                                editor.status_message = StatusMessage::from("No matches found".to_string());
+                            }
+                        } else {
+                            editor.status_message = StatusMessage::from("No matches found".to_string());
+                        }
+                        editor.highlighted_word = Some(query.to_string());
                     }
-                    editor.highlighted_word = Some(query.to_string());
                 },
             )
             .unwrap_or(None);
@@ -507,8 +573,15 @@ impl EditorInterface for TerminalEditor {
                 }
                 _ => (),
             }
-            if let Key::Char(c) = key {
-                callback(self, c, &result);
+            
+            // Call the callback with appropriate character based on key
+            match key {
+                Key::Char(c) => callback(self, c, &result),
+                Key::Up => callback(self, 'k', &result),     // Map Up to 'k'
+                Key::Down => callback(self, 'j', &result),   // Map Down to 'j'
+                Key::Left => callback(self, 'h', &result),   // Map Left to 'h'
+                Key::Right => callback(self, 'l', &result),  // Map Right to 'l'
+                _ => (),
             }
         }
         self.status_message = StatusMessage::from(String::new());

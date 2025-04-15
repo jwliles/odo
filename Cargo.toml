@@ -1,11 +1,11 @@
 [package]
-name = "orgonaut"
+name = "NeoOrg"
 version = "0.2.0"
 edition = "2024"
 description = "A standalone Org-mode editor written in Rust, inspired by both Vim and Emacs"
-authors = ["Orgonaut Contributors"]
+authors = ["NeoOrg Contributors"]
 license = "MIT"
-repository = "https://github.com/jwliles/orgonaut"
+repository = "https://github.com/jwliles/NeoOrg"
 readme = "README.md"
 keywords = ["org-mode", "emacs", "vim", "outliner", "terminal"]
 categories = ["text-editors", "command-line-utilities"]

@@ -145,7 +145,7 @@ impl Terminal {
     
     fn draw_welcome_message(&self) -> Result<(), std::io::Error> {
         let version = env!("CARGO_PKG_VERSION");
-        let mut welcome_message = format!("Orgonaut editor -- version {}", version);
+        let mut welcome_message = format!("NeoOrg editor -- version {}", version);
         let width = self.size.width as usize;
         let len = welcome_message.len();
         

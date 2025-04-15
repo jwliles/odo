@@ -1,4 +1,4 @@
-orgonaut/  
+NeoOrg/  
 ├── Cargo.toml  
 ├── .github/                    # CI/CD setup  
 ├── docs/                       # Documentation   

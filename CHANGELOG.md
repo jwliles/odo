@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Open files from within the editor with Ctrl+o in both Command and Insert modes
+- Confirmation prompt when opening a new file with unsaved changes
+
+### Improved
+- Enhanced search functionality (Ctrl-f):
+  - Incremental search as you type
+  - Navigation between matches with arrow keys, j/k, or n/p
+  - Search wraparound when reaching document boundaries
+  - Added feedback messages for search status
+  - Improved search result highlighting
+
 ## [0.2.0] - 2025-04-02
 
 ### Added
