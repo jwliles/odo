@@ -1,5 +1,5 @@
 use crate::core::{Document, Position, SearchDirection};
-use crate::editor::{EditorInterface, Mode, StatusMessage};
+use crate::editor::{EditorInterface, Mode, StatusMessage, CommandState, Motion, Operator, TextObject};
 use crate::ui::terminal::Terminal;
 use crate::ui::common::ui_interface::UserInterface;
 use std::env;
@@ -20,13 +20,15 @@ pub struct TerminalEditor {
     quit_times: u8,
     highlighted_word: Option<String>,
     mode: Mode,
+    command_state: CommandState,
+    selection_start: Option<Position>,
 }
 
 impl Default for TerminalEditor {
     fn default() -> Self {
         let args: Vec<String> = env::args().collect();
         let mut initial_status =
-            String::from("COMMAND MODE: i=insert | a=append | Ctrl-F=find | Ctrl-S=save | Ctrl-O=open | Ctrl-Q=quit");
+            String::from("NORMAL MODE: i=insert | a=append | Ctrl-F=find | Ctrl-S=save | Ctrl-O=open | Ctrl-Q=quit");
 
         let document = if let Some(file_name) = args.get(1) {
             let doc = Document::open(file_name);
@@ -49,7 +51,9 @@ impl Default for TerminalEditor {
             status_message: StatusMessage::from(initial_status),
             quit_times: QUIT_TIMES,
             highlighted_word: None,
-            mode: Mode::Command, // Start in Command Mode
+            mode: Mode::Normal, // Start in Normal Mode (previously called Command)
+            command_state: CommandState::new(),
+            selection_start: None,
         }
     }
 }
@@ -61,6 +65,10 @@ impl TerminalEditor {
                 die(error);
             }
             if self.should_quit {
+                // Clean up the terminal before exiting
+                if let Err(error) = self.terminal.cleanup() {
+                    die(error);
+                }
                 break;
             }
             if let Err(error) = self.process_keypress() {
@@ -212,8 +220,11 @@ impl TerminalEditor {
         
         // Add mode to status bar
         let mode_str = match self.mode {
-            Mode::Command => "COMMAND",
+            Mode::Normal => "NORMAL",
             Mode::Insert => "INSERT",
+            Mode::Visual => "VISUAL",
+            Mode::VisualLine => "VISUAL LINE",
+            Mode::Command => "COMMAND",
         };
         
         status = format!(
@@ -251,28 +262,273 @@ impl TerminalEditor {
             print!("{}", text);
         }
     }
+    
+    // Handler for g-prefixed commands (Org-specific navigation)
+    fn handle_g_command(&mut self) -> Result<(), std::io::Error> {
+        self.status_message = StatusMessage::from(String::from("g"));
+        
+        // Read the next key after g
+        let next_key = Terminal::read_key()?;
+        match next_key {
+            Key::Char('g') => {
+                // Go to beginning of file
+                self.cursor_position = Position { x: 0, y: 0 };
+                self.command_state.clear();
+            }
+            Key::Char('h') => {
+                // Go to previous heading at same level
+                self.status_message = StatusMessage::from(String::from("Previous heading (same level) - Not implemented"));
+                self.command_state.clear();
+            }
+            Key::Char('j') => {
+                // Go to next heading
+                self.status_message = StatusMessage::from(String::from("Next heading - Not implemented"));
+                self.command_state.clear();
+            }
+            Key::Char('k') => {
+                // Go to previous heading
+                self.status_message = StatusMessage::from(String::from("Previous heading - Not implemented"));
+                self.command_state.clear();
+            }
+            Key::Char('l') => {
+                // Go to next heading at same level
+                self.status_message = StatusMessage::from(String::from("Next heading (same level) - Not implemented"));
+                self.command_state.clear();
+            }
+            Key::Char('p') => {
+                // Go to parent heading
+                self.status_message = StatusMessage::from(String::from("Parent heading - Not implemented"));
+                self.command_state.clear();
+            }
+            Key::Char('c') => {
+                // Go to child heading
+                self.status_message = StatusMessage::from(String::from("Child heading - Not implemented"));
+                self.command_state.clear();
+            }
+            Key::Char('t') => {
+                // Go to next TODO item
+                self.status_message = StatusMessage::from(String::from("Next TODO item - Not implemented"));
+                self.command_state.clear();
+            }
+            Key::Char('b') => {
+                // Go to next code block
+                self.status_message = StatusMessage::from(String::from("Next code block - Not implemented"));
+                self.command_state.clear();
+            }
+            _ => {
+                // Unknown g command
+                self.command_state.clear();
+            }
+        }
+        
+        Ok(())
+    }
 }
 
 impl EditorInterface for TerminalEditor {
     fn process_keypress(&mut self) -> Result<(), std::io::Error> {
         let pressed_key = Terminal::read_key()?;
         
+        // Handle global key bindings that work in all modes
+        match pressed_key {
+            Key::Ctrl('q') => {
+                if self.quit_times > 0 && self.document.is_dirty() {
+                    self.status_message = StatusMessage::from(format!(
+                        "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
+                        self.quit_times
+                    ));
+                    self.quit_times -= 1;
+                    return Ok(());
+                }
+                self.should_quit = true;
+                return Ok(());
+            }
+            Key::Ctrl('s') => {
+                self.save_document()?;
+                return Ok(());
+            }
+            _ => ()
+        }
+        
+        // Handle mode-specific keybindings
         match self.mode {
-            Mode::Command => {
-                match pressed_key {
-                    Key::Ctrl('q') => {
-                        if self.quit_times > 0 && self.document.is_dirty() {
-                            self.status_message = StatusMessage::from(format!(
-                                "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
-                                self.quit_times
-                            ));
-                            self.quit_times -= 1;
-                            return Ok(());
-                        }
-                        self.should_quit = true
+            Mode::Normal => {
+                // First check if a count digit is being entered
+                if let Key::Char(c) = pressed_key {
+                    if c.is_ascii_digit() && (c != '0' || self.command_state.has_count()) {
+                        self.command_state.parse_count(c);
+                        return Ok(());
                     }
-                    Key::Ctrl('s') => self.save_document()?,
-                    Key::Ctrl('f') => { self.search_document(); }
+                }
+                
+                match pressed_key {
+                    Key::Char('i') => self.enter_insert_mode(),
+                    Key::Char('I') => {
+                        // Move to first non-blank character on line and enter insert mode
+                        self.move_cursor(Key::Home);
+                        self.enter_insert_mode();
+                    }
+                    Key::Char('a') => {
+                        // Move cursor right then enter insert mode (append)
+                        if let Some(row) = self.document.row(self.cursor_position.y) {
+                            if !row.is_empty() && self.cursor_position.x < row.len() {
+                                self.move_cursor(Key::Right);
+                            }
+                        }
+                        self.enter_insert_mode();
+                    }
+                    Key::Char('A') => {
+                        // Move to end of line and enter insert mode
+                        self.move_cursor(Key::End);
+                        self.enter_insert_mode();
+                    }
+                    Key::Char('o') => {
+                        // Open line below cursor and enter insert mode
+                        self.move_cursor(Key::End);
+                        self.document.insert(&self.cursor_position, '\n');
+                        self.move_cursor(Key::Down);
+                        self.enter_insert_mode();
+                    }
+                    Key::Char('O') => {
+                        // Open line above cursor and enter insert mode
+                        self.move_cursor(Key::Home);
+                        self.document.insert(&self.cursor_position, '\n');
+                        self.move_cursor(Key::Up);
+                        self.enter_insert_mode();
+                    }
+                    Key::Char('x') => {
+                        // Delete character under cursor
+                        let count = self.command_state.get_count();
+                        for _ in 0..count {
+                            self.document.delete(&self.cursor_position);
+                        }
+                        self.command_state.clear();
+                    }
+                    Key::Char('d') => {
+                        // Delete operator
+                        if self.command_state.is_operator_pending() && self.command_state.get_operator() == Some('d') {
+                            // Delete current line
+                            let count = self.command_state.get_count();
+                            // Implementation would go here
+                            self.status_message = StatusMessage::from(format!("Delete {} lines", count));
+                            self.command_state.clear();
+                        } else {
+                            // Set operator pending state
+                            self.command_state.set_operator_pending('d');
+                            self.status_message = StatusMessage::from("d".to_string());
+                        }
+                    }
+                    Key::Char('y') => {
+                        // Yank operator
+                        if self.command_state.is_operator_pending() && self.command_state.get_operator() == Some('y') {
+                            // Yank current line
+                            let count = self.command_state.get_count();
+                            // Implementation would go here
+                            self.status_message = StatusMessage::from(format!("Yank {} lines", count));
+                            self.command_state.clear();
+                        } else {
+                            // Set operator pending state
+                            self.command_state.set_operator_pending('y');
+                            self.status_message = StatusMessage::from("y".to_string());
+                        }
+                    }
+                    Key::Char('g') => {
+                        // Handle g-prefixed commands
+                        self.handle_g_command()?;
+                    }
+                    Key::Char('v') => {
+                        // Visual mode
+                        self.enter_visual_mode();
+                    }
+                    Key::Char('V') => {
+                        // Visual line mode
+                        self.enter_visual_line_mode();
+                    }
+                    Key::Char(':') => {
+                        // Command mode for Ex commands
+                        self.enter_command_mode();
+                    }
+                    Key::Char('/') => {
+                        // Search forward
+                        self.search_document();
+                    }
+                    // Navigation keys
+                    Key::Char('h') | Key::Left => {
+                        self.move_cursor(Key::Left);
+                        self.command_state.clear();
+                    }
+                    Key::Char('j') | Key::Down => {
+                        let count = self.command_state.get_count();
+                        for _ in 0..count {
+                            self.move_cursor(Key::Down);
+                        }
+                        self.command_state.clear();
+                    }
+                    Key::Char('k') | Key::Up => {
+                        let count = self.command_state.get_count();
+                        for _ in 0..count {
+                            self.move_cursor(Key::Up);
+                        }
+                        self.command_state.clear();
+                    }
+                    Key::Char('l') | Key::Right => {
+                        self.move_cursor(Key::Right);
+                        self.command_state.clear();
+                    }
+                    Key::Char('w') => {
+                        // Move forward one word
+                        let count = self.command_state.get_count();
+                        // Implementation would go here
+                        self.status_message = StatusMessage::from(format!("Move forward {} words", count));
+                        self.command_state.clear();
+                    }
+                    Key::Char('b') => {
+                        // Move backward one word
+                        let count = self.command_state.get_count();
+                        // Implementation would go here
+                        self.status_message = StatusMessage::from(format!("Move backward {} words", count));
+                        self.command_state.clear();
+                    }
+                    Key::Char('e') => {
+                        // Move to end of word
+                        let count = self.command_state.get_count();
+                        // Implementation would go here
+                        self.status_message = StatusMessage::from(format!("Move to end of {} words", count));
+                        self.command_state.clear();
+                    }
+                    Key::Char('0') => {
+                        // Beginning of line
+                        self.move_cursor(Key::Home);
+                        self.command_state.clear();
+                    }
+                    Key::Char('$') => {
+                        // End of line
+                        self.move_cursor(Key::End);
+                        self.command_state.clear();
+                    }
+                    Key::Char('G') => {
+                        // Go to line
+                        if self.command_state.has_count() {
+                            let line = self.command_state.get_count().saturating_sub(1);
+                            if line < self.document.len() {
+                                self.cursor_position.y = line;
+                                self.cursor_position.x = 0;
+                            }
+                        } else {
+                            // Go to end of file
+                            self.cursor_position.y = self.document.len().saturating_sub(1);
+                            self.cursor_position.x = 0;
+                        }
+                        self.command_state.clear();
+                    }
+                    Key::PageUp | Key::PageDown | Key::End | Key::Home => {
+                        self.move_cursor(pressed_key);
+                        self.command_state.clear();
+                    }
+                    Key::Ctrl('f') => {
+                        self.search_document();
+                        self.command_state.clear();
+                    }
                     Key::Ctrl('o') => {
                         // Prompt for filename and open document
                         if self.document.is_dirty() {
@@ -296,71 +552,22 @@ impl EditorInterface for TerminalEditor {
                                 self.offset = Position::default();
                             }
                         }
+                        self.command_state.clear();
                     }
-                    Key::Char('i') => self.enter_insert_mode(),
-                    Key::Char('a') => {
-                        // Move cursor right then enter insert mode (append)
-                        if let Some(row) = self.document.row(self.cursor_position.y) {
-                            if !row.is_empty() && self.cursor_position.x < row.len() {
-                                self.move_cursor(Key::Right);
-                            }
+                    _ => {
+                        // If an operator is pending but got an invalid motion, clear the state
+                        if self.command_state.is_operator_pending() {
+                            self.command_state.clear();
                         }
-                        self.enter_insert_mode();
                     }
-                    Key::Char('A') => {
-                        // Move to end of line and enter insert mode
-                        self.move_cursor(Key::End);
-                        self.enter_insert_mode();
-                    }
-                    Key::Char('I') => {
-                        // Move to start of line and enter insert mode
-                        self.move_cursor(Key::Home);
-                        self.enter_insert_mode();
-                    }
-                    Key::Char('o') => {
-                        // Open line below cursor and enter insert mode
-                        self.move_cursor(Key::End);
-                        self.document.insert(&self.cursor_position, '\n');
-                        self.move_cursor(Key::Down);
-                        self.enter_insert_mode();
-                    }
-                    Key::Char('O') => {
-                        // Open line above cursor and enter insert mode
-                        self.move_cursor(Key::Home);
-                        self.document.insert(&self.cursor_position, '\n');
-                        self.move_cursor(Key::Up);
-                        self.enter_insert_mode();
-                    }
-                    Key::Char('x') => self.document.delete(&self.cursor_position),
-                    Key::Up
-                    | Key::Down
-                    | Key::Left
-                    | Key::Right
-                    | Key::PageUp
-                    | Key::PageDown
-                    | Key::End
-                    | Key::Home => self.move_cursor(pressed_key),
-                    _ => (),
                 }
             }
             Mode::Insert => {
                 match pressed_key {
-                    Key::Esc => self.enter_command_mode(),
-                    Key::Ctrl('q') => {
-                        if self.quit_times > 0 && self.document.is_dirty() {
-                            self.status_message = StatusMessage::from(format!(
-                                "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
-                                self.quit_times
-                            ));
-                            self.quit_times -= 1;
-                            return Ok(());
-                        }
-                        self.should_quit = true
-                    }
-                    Key::Ctrl('s') => self.save_document()?,
+                    Key::Esc => self.enter_normal_mode(),
                     Key::Ctrl('o') => {
-                        // Force command mode and then process the open command
-                        self.enter_command_mode();
+                        // Force normal mode and then process the open command
+                        self.enter_normal_mode();
                         self.process_keypress()?;
                         self.enter_insert_mode();
                     },
@@ -375,15 +582,81 @@ impl EditorInterface for TerminalEditor {
                             self.document.delete(&self.cursor_position);
                         }
                     }
-                    Key::Up
-                    | Key::Down
-                    | Key::Left
-                    | Key::Right
-                    | Key::PageUp
-                    | Key::PageDown
-                    | Key::End
-                    | Key::Home => self.move_cursor(pressed_key),
+                    Key::Up | Key::Down | Key::Left | Key::Right | 
+                    Key::PageUp | Key::PageDown | Key::End | Key::Home => {
+                        self.move_cursor(pressed_key);
+                    }
                     _ => (),
+                }
+            }
+            Mode::Visual => {
+                match pressed_key {
+                    Key::Esc => self.enter_normal_mode(),
+                    Key::Char('v') => self.enter_normal_mode(),
+                    Key::Char('V') => self.enter_visual_line_mode(),
+                    Key::Up | Key::Down | Key::Left | Key::Right | 
+                    Key::PageUp | Key::PageDown | Key::End | Key::Home |
+                    Key::Char('h') | Key::Char('j') | Key::Char('k') | Key::Char('l') => {
+                        // Map h,j,k,l to arrow keys
+                        let key = match pressed_key {
+                            Key::Char('h') => Key::Left,
+                            Key::Char('j') => Key::Down,
+                            Key::Char('k') => Key::Up,
+                            Key::Char('l') => Key::Right,
+                            _ => pressed_key
+                        };
+                        self.move_cursor(key);
+                    }
+                    // Visual mode operators
+                    Key::Char('y') => {
+                        // Yank selection
+                        self.status_message = StatusMessage::from("Yanked selection".to_string());
+                        self.enter_normal_mode();
+                    }
+                    Key::Char('d') => {
+                        // Delete selection
+                        self.status_message = StatusMessage::from("Deleted selection".to_string());
+                        self.enter_normal_mode();
+                    }
+                    _ => ()
+                }
+            }
+            Mode::VisualLine => {
+                match pressed_key {
+                    Key::Esc => self.enter_normal_mode(),
+                    Key::Char('v') => self.enter_visual_mode(),
+                    Key::Char('V') => self.enter_normal_mode(),
+                    Key::Up | Key::Down | Key::Char('j') | Key::Char('k') => {
+                        // Only allow vertical movement in visual line mode
+                        let key = match pressed_key {
+                            Key::Char('j') => Key::Down,
+                            Key::Char('k') => Key::Up,
+                            _ => pressed_key
+                        };
+                        self.move_cursor(key);
+                    }
+                    // Visual line mode operators
+                    Key::Char('y') => {
+                        // Yank lines
+                        self.status_message = StatusMessage::from("Yanked lines".to_string());
+                        self.enter_normal_mode();
+                    }
+                    Key::Char('d') => {
+                        // Delete lines
+                        self.status_message = StatusMessage::from("Deleted lines".to_string());
+                        self.enter_normal_mode();
+                    }
+                    _ => ()
+                }
+            }
+            Mode::Command => {
+                // Command-line mode (:) - not fully implemented yet
+                match pressed_key {
+                    Key::Esc => self.enter_normal_mode(),
+                    _ => {
+                        self.status_message = StatusMessage::from("Command mode not fully implemented".to_string());
+                        self.enter_normal_mode();
+                    }
                 }
             }
         }
@@ -397,12 +670,16 @@ impl EditorInterface for TerminalEditor {
     }
     
     fn refresh_screen(&mut self) -> Result<(), std::io::Error> {
-        self.terminal.cursor_hide()?;
-        self.terminal.cursor_position(&Position::default())?;
+        Terminal::cursor_hide()?;
+        Terminal::cursor_position(&Position::default())?;
+        
         if self.should_quit {
             self.terminal.clear_screen()?;
             println!("Goodbye.\r");
         } else {
+            // Clear screen before redrawing
+            self.terminal.clear_screen()?;
+            
             self.document.highlight(
                 &self.highlighted_word,
                 Some(
@@ -593,20 +870,50 @@ impl EditorInterface for TerminalEditor {
     
     fn enter_insert_mode(&mut self) {
         self.mode = Mode::Insert;
+        self.command_state.clear();
+        self.selection_start = None;
         self.status_message = StatusMessage::from("-- INSERT MODE --".to_string());
+    }
+    
+    fn enter_normal_mode(&mut self) {
+        self.mode = Mode::Normal;
+        self.command_state.clear();
+        self.selection_start = None;
+        self.status_message = StatusMessage::from("-- NORMAL MODE --".to_string());
+    }
+    
+    fn enter_visual_mode(&mut self) {
+        self.mode = Mode::Visual;
+        self.selection_start = Some(self.cursor_position);
+        self.command_state.clear();
+        self.status_message = StatusMessage::from("-- VISUAL MODE --".to_string());
+    }
+    
+    fn enter_visual_line_mode(&mut self) {
+        self.mode = Mode::VisualLine;
+        self.selection_start = Some(Position { 
+            x: 0, 
+            y: self.cursor_position.y 
+        });
+        self.command_state.clear();
+        self.status_message = StatusMessage::from("-- VISUAL LINE MODE --".to_string());
     }
     
     fn enter_command_mode(&mut self) {
         self.mode = Mode::Command;
+        self.command_state.clear();
         self.status_message = StatusMessage::from("-- COMMAND MODE --".to_string());
     }
 }
 
 fn die(e: std::io::Error) {
     // This is a utility function to handle fatal errors
-    // We create a temporary Terminal instance just to clear the screen
+    // We create a temporary Terminal instance just to clean up properly
     if let Ok(term) = Terminal::default() {
-        let _ = term.clear_screen();
+        let _ = term.cleanup();
     }
-    panic!("{}", e);
+    
+    // Print error to stderr (will be visible after cleanup)
+    eprintln!("Error: {}", e);
+    std::process::exit(1);
 }
