@@ -1,13 +1,13 @@
 # Workspace Migration Plan
 
-This document outlines the plan to migrate NeoOrg to a Cargo workspace structure, with the goal of eventually extracting reusable components into separate repositories.
+This document outlines the plan to migrate Odo to a Cargo workspace structure, with the goal of eventually extracting reusable components into separate repositories.
 
 ## Phase 1: Initial Workspace Setup
 
 1. **Create Workspace Structure**
 
    ```
-   NeoOrg/
+   Odo/
    ├── Cargo.toml (workspace manifest)
    ├── .cargo/      (workspace configuration)
    │   └── config.toml
@@ -176,7 +176,7 @@ This document outlines the plan to migrate NeoOrg to a Cargo workspace structure
    - Follow same process as structural-undo
    - Update dependencies in main project
 
-3. **NeoOrg Repository Updates**
+3. **Odo Repository Updates**
 
    Update main project:
    - Switch to using published crates
@@ -190,7 +190,7 @@ A crate is ready for extraction when:
 1. **API Stability**: The API is stable and unlikely to undergo major changes
 2. **Documentation**: Comprehensive documentation is in place
 3. **Test Coverage**: Good test coverage exists
-4. **Reusability**: The crate has proven reusable beyond NeoOrg
+4. **Reusability**: The crate has proven reusable beyond Odo
 5. **Demand**: There's actual or potential demand from other projects
 
 ## Development Workflow During Transition

@@ -1,6 +1,6 @@
-# NeoOrg Crate Refactoring Plan
+# Odo Crate Refactoring Plan
 
-This document outlines the step-by-step plan to refactor NeoOrg into a modular crate architecture that enables reuse in other projects. 
+This document outlines the step-by-step plan to refactor Odo into a modular crate architecture that enables reuse in other projects. 
 
 ## Phase 1: Create Workspace Structure
 

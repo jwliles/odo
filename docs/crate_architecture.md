@@ -1,8 +1,8 @@
-# NeoOrg Crate Architecture
+# Odo Crate Architecture
 
 ## Overview
 
-This document outlines the proposed crate architecture for NeoOrg, focusing on creating a reusable editor core that can be embedded in various applications and UIs, similar to CodeMirror, Scintilla, or Monaco.
+This document outlines the proposed crate architecture for Odo, focusing on creating a reusable editor core that can be embedded in various applications and UIs, similar to CodeMirror, Scintilla, or Monaco.
 
 ## Goals
 

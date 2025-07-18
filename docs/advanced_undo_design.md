@@ -1,6 +1,6 @@
 # Advanced Undo/Redo System Design
 
-This document outlines the design for a sophisticated undo/redo system in NeoOrg, inspired by Pijul's patch theory, Tree-sitter's structural understanding, Vim's persistent undo tree, and Emacs' kill ring.
+This document outlines the design for a sophisticated undo/redo system in Odo, inspired by Pijul's patch theory, Tree-sitter's structural understanding, Vim's persistent undo tree, and Emacs' kill ring.
 
 ## Design Goals
 

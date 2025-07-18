@@ -1,6 +1,6 @@
 # Workspace Setup Guide
 
-This document provides practical steps for setting up the NeoOrg workspace and migrating the current codebase.
+This document provides practical steps for setting up the Odo workspace and migrating the current codebase.
 
 ## Initial Workspace Setup
 
@@ -32,7 +32,7 @@ version = "0.3.0"
 authors = ["J. W. Liles <...>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/jwliles/NeoOrg"
+repository = "https://github.com/jwliles/Odo"
 
 [workspace.dependencies]
 # Core dependencies
@@ -132,7 +132,7 @@ edition = "2021"
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Core document model for NeoOrg editor"
+description = "Core document model for Odo editor"
 
 [dependencies]
 unicode-segmentation = { workspace = true }
@@ -152,7 +152,7 @@ Create `neo-org-core/src/lib.rs`:
 ```rust
 //! # Neo-Org Core
 //!
-//! Core document model for NeoOrg editor.
+//! Core document model for Odo editor.
 
 mod document;
 mod position;
@@ -182,7 +182,7 @@ edition = "2021"
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Editor logic and command handling for NeoOrg"
+description = "Editor logic and command handling for Odo"
 
 [dependencies]
 neo-org-core = { path = "../neo-org-core" }
@@ -199,7 +199,7 @@ Create `neo-org-editor/src/lib.rs`:
 ```rust
 //! # Neo-Org Editor
 //!
-//! Editor logic and command handling for NeoOrg.
+//! Editor logic and command handling for Odo.
 
 mod mode;
 mod command;
@@ -227,7 +227,7 @@ edition = "2021"
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Terminal interface for NeoOrg"
+description = "Terminal interface for Odo"
 
 [dependencies]
 neo-org-core = { path = "../neo-org-core" }
@@ -241,7 +241,7 @@ Create `neo-org-terminal/src/lib.rs`:
 ```rust
 //! # Neo-Org Terminal
 //!
-//! Terminal interface for NeoOrg.
+//! Terminal interface for Odo.
 
 mod terminal;
 mod renderer;
@@ -265,7 +265,7 @@ edition = "2021"
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "GUI interface for NeoOrg using egui"
+description = "GUI interface for Odo using egui"
 
 [dependencies]
 neo-org-core = { path = "../neo-org-core" }
@@ -280,14 +280,14 @@ Create `neo-org-gui/src/lib.rs`:
 ```rust
 //! # Neo-Org GUI
 //!
-//! GUI interface for NeoOrg using egui.
+//! GUI interface for Odo using egui.
 
 mod app;
 mod renderer;
 mod widgets;
 
 // Public exports
-pub use app::{NeoOrgApp, AppConfig};
+pub use app::{OdoApp, AppConfig};
 pub use renderer::GuiRenderer;
 ```
 
@@ -328,7 +328,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     
     // Start the appropriate interface based on args
-    println!("NeoOrg workspace-based version starting...");
+    println!("Odo workspace-based version starting...");
     
     // Placeholder until real implementation
     process::exit(0);

@@ -1,8 +1,8 @@
-# NeoOrg Implementation Plan
+# Odo Implementation Plan
 
 ## Overview
 
-This document outlines the implementation plan for enhancing NeoOrg with Vim-inspired Org-mode-optimized motions and commands. The implementation follows a phased approach:
+This document outlines the implementation plan for enhancing Odo with Vim-inspired Org-mode-optimized motions and commands. The implementation follows a phased approach:
 
 1. **Phase 0: Standard Vim Motions** - Implement core Vim navigation
 2. **Phase 1: Org Structure-Aware Commands** - Add Org-aware enhancements 

@@ -1,4 +1,4 @@
-# NeoOrg Editor Core API
+# Odo Editor Core API
 
 This document outlines the proposed API for the neo-org-editor crate, which would be the primary reusable component that other applications can embed.
 
