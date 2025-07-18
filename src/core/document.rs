@@ -4,9 +4,9 @@ use std::io::{Error, Write};
 
 #[derive(Default)]
 pub struct Document {
-    rows: Vec<Row>,
+    pub rows: Vec<Row>,
     pub file_name: Option<String>,
-    dirty: bool,
+    pub dirty: bool,
     file_type: FileType,
 }
 
@@ -164,5 +164,11 @@ impl Document {
                 &self.file_type,
             );
         }
+    }
+    
+    // Helper method for GUI implementation to insert a row
+    pub fn insert_row(&mut self, text: &str) {
+        self.rows.push(Row::from(text));
+        self.dirty = true;
     }
 }

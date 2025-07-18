@@ -6,10 +6,10 @@ pub struct StatusMessage {
 }
 
 impl StatusMessage {
-    pub fn from(message: String) -> Self {
+    pub fn from<T: Into<String>>(message: T) -> Self {
         Self {
             time: Instant::now(),
-            text: message,
+            text: message.into(),
         }
     }
 }

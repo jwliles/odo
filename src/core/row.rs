@@ -41,8 +41,31 @@ impl OrgHighlighter {
                     }
                     
                     // Add rest of headline
-                    for _ in 0..(chars.len() - level - 5) {
-                        result.push(highlighting::Type::OrgHeadline);
+                    // Check for tags in the content after TODO
+                    let content = &line[(level + 5)..];
+                    let tag_regex = get_tag_regex();
+                    
+                    if let Some(tag_match) = tag_regex.find(content) {
+                        // Headline text before tags
+                        for _ in 0..tag_match.start() {
+                            result.push(highlighting::Type::OrgHeadline);
+                        }
+                        // Tags at the end
+                        for c in content[tag_match.start()..].chars() {
+                            if c == ':' {
+                                result.push(highlighting::Type::OrgTag);
+                            } else if c.is_whitespace() {
+                                result.push(highlighting::Type::None);
+                            } else {
+                                // The tag text itself
+                                result.push(highlighting::Type::OrgTag);
+                            }
+                        }
+                    } else {
+                        // No tags, regular headline all the way
+                        for _ in 0..(chars.len() - level - 5) {
+                            result.push(highlighting::Type::OrgHeadline);
+                        }
                     }
                 } else if remaining.trim_start().starts_with("DONE ") {
                     for _ in 0..5 { // "DONE " is 5 chars
@@ -50,13 +73,61 @@ impl OrgHighlighter {
                     }
                     
                     // Add rest of headline
-                    for _ in 0..(chars.len() - level - 5) {
-                        result.push(highlighting::Type::OrgHeadline);
+                    // Check for tags in the content after TODO
+                    let content = &line[(level + 5)..];
+                    let tag_regex = get_tag_regex();
+                    
+                    if let Some(tag_match) = tag_regex.find(content) {
+                        // Headline text before tags
+                        for _ in 0..tag_match.start() {
+                            result.push(highlighting::Type::OrgHeadline);
+                        }
+                        // Tags at the end
+                        for c in content[tag_match.start()..].chars() {
+                            if c == ':' {
+                                result.push(highlighting::Type::OrgTag);
+                            } else if c.is_whitespace() {
+                                result.push(highlighting::Type::None);
+                            } else {
+                                // The tag text itself
+                                result.push(highlighting::Type::OrgTag);
+                            }
+                        }
+                    } else {
+                        // No tags, regular headline all the way
+                        for _ in 0..(chars.len() - level - 5) {
+                            result.push(highlighting::Type::OrgHeadline);
+                        }
                     }
                 } else {
                     // Regular headline without TODO/DONE
-                    for _ in level..chars.len() {
-                        result.push(highlighting::Type::OrgHeadline);
+                    
+                    // Check for tags at the end of headline (format: :tag1:tag2:)
+                    let headline_text = &line[level..];
+                    // Look for tags pattern - text ending with one or more :tag: patterns
+                    let tag_regex = get_tag_regex();
+                    
+                    if let Some(tag_match) = tag_regex.find(headline_text) {
+                        // Headline text before tags
+                        for _ in level..(level + tag_match.start()) {
+                            result.push(highlighting::Type::OrgHeadline);
+                        }
+                        // Tags at the end
+                        for c in headline_text[tag_match.start()..].chars() {
+                            if c == ':' {
+                                result.push(highlighting::Type::OrgTag);
+                            } else if c.is_whitespace() {
+                                result.push(highlighting::Type::None);
+                            } else {
+                                // The tag text itself
+                                result.push(highlighting::Type::OrgTag);
+                            }
+                        }
+                    } else {
+                        // No tags, regular headline all the way
+                        for _ in level..chars.len() {
+                            result.push(highlighting::Type::OrgHeadline);
+                        }
                     }
                 }
             }
@@ -68,10 +139,16 @@ impl OrgHighlighter {
             for _ in 2..chars.len() {
                 result.push(highlighting::Type::None);
             }
-        } else if line.contains("::") {
-            // Definition list or tag
+        } else if line.contains("::") || line.strip_prefix(':').map_or(false, |s| s.contains(':')) {
+            // Definition list or tag line
+            let mut in_tag = false;
+            
             for c in chars {
                 if c == ':' {
+                    in_tag = !in_tag;
+                    result.push(highlighting::Type::OrgTag);
+                } else if in_tag {
+                    // Inside a tag
                     result.push(highlighting::Type::OrgTag);
                 } else {
                     result.push(highlighting::Type::None);
@@ -150,6 +227,13 @@ static ORG_HIGHLIGHTER_CELL: OnceLock<Mutex<OrgHighlighter>> = OnceLock::new();
 
 fn get_org_highlighter() -> &'static Mutex<OrgHighlighter> {
     ORG_HIGHLIGHTER_CELL.get_or_init(|| Mutex::new(OrgHighlighter::new()))
+}
+
+// Cache for compiled regex patterns
+static TAG_REGEX: OnceLock<regex::Regex> = OnceLock::new();
+
+fn get_tag_regex() -> &'static regex::Regex {
+    TAG_REGEX.get_or_init(|| regex::Regex::new(r"(?:\s+)(:[\w@_#%:]+:)+$").unwrap())
 }
 
 #[derive(Default)]
@@ -277,6 +361,10 @@ impl Row {
     }
     pub fn as_bytes(&self) -> &[u8] {
         self.string.as_bytes()
+    }
+    
+    pub fn as_string(&self) -> &str {
+        &self.string
     }
     pub fn find(&self, query: &str, at: usize, direction: SearchDirection) -> Option<usize> {
         if at > self.len || query.is_empty() {

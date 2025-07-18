@@ -27,4 +27,7 @@ pub trait EditorInterface {
     // Mode operations
     fn enter_insert_mode(&mut self);
     fn enter_command_mode(&mut self);
+    fn enter_normal_mode(&mut self);
+    fn enter_visual_mode(&mut self);
+    fn enter_visual_line_mode(&mut self);
 }

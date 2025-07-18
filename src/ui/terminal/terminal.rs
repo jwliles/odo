@@ -24,6 +24,10 @@ pub struct Terminal {
 impl Terminal {
     pub fn default() -> Result<Self, std::io::Error> {
         let size = termion::terminal_size()?;
+        // Enter alternate screen and hide cursor
+        print!("{}{}", termion::cursor::Hide, termion::clear::All);
+        io::stdout().flush()?;
+        
         Ok(Self {
             size: Size {
                 width: size.0,
@@ -65,6 +69,80 @@ impl Terminal {
             }
         }
     }
+    
+    /// Clear the entire screen.
+    pub fn clear_screen(&self) -> Result<(), std::io::Error> {
+        print!("{}", termion::clear::All);
+        io::stdout().flush()?;
+        Ok(())
+    }
+    
+    /// Static methods to control cursor visibility
+    pub fn cursor_hide() -> Result<(), std::io::Error> {
+        print!("{}", termion::cursor::Hide);
+        io::stdout().flush()?;
+        Ok(())
+    }
+    
+    pub fn cursor_show() -> Result<(), std::io::Error> {
+        print!("{}", termion::cursor::Show);
+        io::stdout().flush()?;
+        Ok(())
+    }
+    
+    pub fn cursor_position(position: &Position) -> Result<(), std::io::Error> {
+        let Position { x, y } = *position;
+        let x = x.saturating_add(1) as u16;
+        let y = y.saturating_add(1) as u16;
+        print!("{}", termion::cursor::Goto(x, y));
+        io::stdout().flush()?;
+        Ok(())
+    }
+    
+    /// Clear the screen and restore terminal state.
+    pub fn cleanup(&self) -> Result<(), std::io::Error> {
+        use termion::cursor;
+        // Clear screen, move cursor to top-left, show cursor
+        print!("{}{}{}", termion::clear::All, cursor::Goto(1, 1), cursor::Show);
+        // Make sure all output is flushed
+        io::stdout().flush()?;
+        Ok(())
+    }
+    
+    // Static utility methods
+    pub fn flush() -> Result<(), std::io::Error> {
+        io::stdout().flush()
+    }
+    
+    pub fn clear_current_line() {
+        print!("{}", termion::clear::CurrentLine);
+    }
+    
+    fn draw_welcome_message(&self) -> Result<(), std::io::Error> {
+        let version = env!("CARGO_PKG_VERSION");
+        let mut welcome_message = format!("Odo editor -- version {}", version);
+        let width = self.size.width as usize;
+        let len = welcome_message.len();
+        
+        #[allow(clippy::integer_arithmetic, clippy::integer_division)]
+        let padding = width.saturating_sub(len) / 2;
+        let spaces = " ".repeat(padding.saturating_sub(1));
+        welcome_message = format!("~{}{}", spaces, welcome_message);
+        welcome_message.truncate(width);
+        println!("{}\r", welcome_message);
+        
+        Ok(())
+    }
+    
+    fn draw_row(&self, row: &Row, offset: &Position) -> Result<(), std::io::Error> {
+        let width = self.size.width as usize;
+        let start = offset.x;
+        let end = offset.x.saturating_add(width);
+        let rendered_row = row.render(start, end);
+        println!("{}\r", rendered_row);
+        
+        Ok(())
+    }
 }
 
 impl UserInterface for Terminal {
@@ -85,7 +163,7 @@ impl UserInterface for Terminal {
         Ok(())
     }
     
-    fn draw_status_bar(&self, document: &Document, cursor_position: &Position, status: &str) -> Result<(), std::io::Error> {
+    fn draw_status_bar(&self, _document: &Document, _cursor_position: &Position, _status: &str) -> Result<(), std::io::Error> {
         // Implementation specific to terminal UI
         Ok(())
     }
@@ -134,42 +212,5 @@ impl UserInterface for Terminal {
     
     fn size(&self) -> (usize, usize) {
         (self.size.width as usize, self.size.height as usize)
-    }
-}
-
-// Terminal-specific implementations
-impl Terminal {
-    pub fn clear_current_line() {
-        print!("{}", termion::clear::CurrentLine);
-    }
-    
-    fn draw_welcome_message(&self) -> Result<(), std::io::Error> {
-        let version = env!("CARGO_PKG_VERSION");
-        let mut welcome_message = format!("NeoOrg editor -- version {}", version);
-        let width = self.size.width as usize;
-        let len = welcome_message.len();
-        
-        #[allow(clippy::integer_arithmetic, clippy::integer_division)]
-        let padding = width.saturating_sub(len) / 2;
-        let spaces = " ".repeat(padding.saturating_sub(1));
-        welcome_message = format!("~{}{}", spaces, welcome_message);
-        welcome_message.truncate(width);
-        println!("{}\r", welcome_message);
-        
-        Ok(())
-    }
-    
-    fn draw_row(&self, row: &Row, offset: &Position) -> Result<(), std::io::Error> {
-        let width = self.size.width as usize;
-        let start = offset.x;
-        let end = offset.x.saturating_add(width);
-        let rendered_row = row.render(start, end);
-        println!("{}\r", rendered_row);
-        
-        Ok(())
-    }
-    
-    pub fn flush() -> Result<(), std::io::Error> {
-        io::stdout().flush()
     }
 }

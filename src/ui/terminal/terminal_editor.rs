@@ -187,7 +187,7 @@ impl TerminalEditor {
     }
 
     fn draw_welcome_message(&self) {
-        let mut welcome_message = format!("NeoOrg editor -- version {}", VERSION);
+        let mut welcome_message = format!("Odo editor -- version {}", VERSION);
         let width = self.terminal.size().width as usize;
         let len = welcome_message.len();
         #[allow(clippy::integer_arithmetic, clippy::integer_division)]
