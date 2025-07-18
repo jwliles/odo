@@ -1,6 +1,6 @@
-# Contributing to NeoOrg
+# Contributing to Odo
 
-Thank you for your interest in contributing to NeoOrg! This document outlines the GitFlow workflow we use and how to contribute effectively.
+Thank you for your interest in contributing to Odo! This document outlines the GitFlow workflow we use and how to contribute effectively.
 
 ## GitFlow Workflow
 
@@ -20,8 +20,8 @@ We use a GitFlow workflow for this project:
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR-USERNAME/NeoOrg.git`
-3. Set up upstream: `git remote add upstream https://github.com/ORIGINAL-OWNER/NeoOrg.git`
+2. Clone your fork: `git clone https://github.com/YOUR-USERNAME/Odo.git`
+3. Set up upstream: `git remote add upstream https://github.com/ORIGINAL-OWNER/Odo.git`
 4. Create a feature branch from develop: `git checkout -b feature/your-feature-name develop`
 
 ## Development Process

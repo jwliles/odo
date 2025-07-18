@@ -1,25 +1,47 @@
-# NeoOrg
+# Odo
 
-A standalone Org-mode editor written in Rust, inspired by both Vim and Emacs. NeoOrg provides Org-mode functionality without requiring Emacs while maintaining a modal editing style similar to Vim.
+A versatile text editor with first-class Org support, designed for code, prose, and any content. Odo combines the power of modal editing with excellent support for Org-mode, making it perfect for both programming and writing tasks.
 
 ## Features
 
+### Currently Implemented
 - Command and Insert modes with Vi-like keybindings
-- Org-mode syntax highlighting and functionality:
-  - Headlines with different levels (*, **, ***, etc.)
-  - TODO state tracking (TODO, DONE)
-  - Tags support (e.g., :work:, :personal:)
+- Basic file operations (open, save)
+- Simple search functionality
+- GUI mode (experimental, run with `--gui` flag)
+
+### Partially Implemented
+- Basic Org-mode syntax highlighting:
+  - Headlines detection for different levels (*, **, ***, etc.)
+  - TODO/DONE keyword detection
+  - Tag highlighting (both in headlines and standalone tag lines)
+  - Basic list item detection
+  - Text styling indicators (* for bold, / for italic, _ for underline)
+  - Basic link detection
+
+### Planned for Future Releases
+- Full Org-mode functionality:
+  - Enhanced syntax highlighting
   - Code blocks with syntax highlighting
-  - Lists (ordered, unordered, checklists)
-- File operations (open, save)
-- Advanced search functionality
+  - Checklists
+  - Folding/unfolding of sections
+- Multi-language syntax highlighting for code files
 - Agenda views and task management
 - Export capabilities (HTML, Markdown)
+- Tags filtering and management
+- Tables with spreadsheet-like calculations
+- Advanced text editing features for prose writing
 
 ## Usage
 
+### Terminal Mode (Default)
 ```
 cargo run [filename]
+```
+
+### GUI Mode (Experimental)
+```
+cargo run -- --gui [filename]
 ```
 
 ### Key Commands
@@ -60,6 +82,16 @@ This project follows the GitFlow workflow:
 - `hotfix/xxx` - Hotfix branches for urgent production fixes
 - `release/x.x.x` - Release branches for preparing new versions
 
+### Current Development Focus
+
+The current development focus is on:
+1. Completing the modular architecture
+2. Improving the terminal UI experience
+3. Developing the experimental GUI mode
+4. Implementing Org-mode-aware Vim motions and text objects
+
+See the [ROADMAP.md](ROADMAP.md) file for more details on planned features.
+
 ### Build Instructions
 
 ```
@@ -68,38 +100,63 @@ cargo build --release
 
 ## Org-mode Functionality
 
-NeoOrg implements the core functionality of Emacs Org-mode in a standalone application with a modal editing interface inspired by Vim. Key Org-mode features include:
+Odo aims to implement the core functionality of Emacs Org-mode in a standalone application with a modal editing interface inspired by Vim.
 
-### Document Structure
-- Headlines with different levels for organizing content
-- Folding/unfolding of sections
-- Properties drawers for metadata
+### Current Progress
+- **Document Structure**
+  - Basic detection of headlines with different levels
+  - Simple syntax highlighting for key Org elements
 
-### Task Management
-- TODO keywords for tracking task states
-- Priority markers
-- Deadlines and scheduled dates
-- Tags for categorization
+- **Formatting**
+  - Basic highlighting for text formatting indicators (bold, italic, underline)
+  - Rudimentary detection of links
 
-### Content Features
-- Tables with spreadsheet-like calculations
-- Code blocks with syntax highlighting for various languages
-- Links to files, websites, or within the document
-- Lists (ordered, unordered, and checklists)
+- **Task Management**
+  - Simple highlighting for TODO/DONE keywords
+  - Basic detection of lists and tags (visual highlighting only)
 
-### Advanced Features
-- Agenda views to see scheduled tasks and deadlines
-- Export functionality to convert Org files to other formats
-- Calendar integration
-- Time tracking
+### Planned for Future Releases
+- **Document Structure**
+  - Folding/unfolding of sections
+  - Properties drawers for metadata
+  - Better handling of hierarchical structure
 
-## Why NeoOrg?
+- **Task Management**
+  - Priority markers
+  - Deadlines and scheduled dates
+  - Enhanced TODO state workflows
+  - Functional tags system
 
-NeoOrg aims to bring the power of Org-mode to users who:
-- Prefer Vim-style modal editing
-- Want a lightweight, fast application focused solely on Org-mode
-- Need cross-platform compatibility with modern systems
-- Desire a customizable experience without the complexity of Emacs configuration
+- **Content Features**
+  - Tables with spreadsheet-like calculations
+  - Code blocks with syntax highlighting for various languages
+  - Functional links to files, websites, or within the document
+  - Interactive checklists
+
+- **Advanced Features**
+  - Agenda views to see scheduled tasks and deadlines
+  - Export functionality to convert Org files to other formats
+  - Calendar integration
+  - Time tracking
+
+## Why Odo?
+
+Odo is a versatile text editor that excels at:
+- Efficient modal editing inspired by Vim's philosophy
+- First-class Org-mode support for organization and note-taking
+- Lightweight, fast performance for any type of content
+- Cross-platform compatibility with modern systems
+- Intuitive experience without complex configuration
+- Flexibility with both terminal and graphical interfaces
+- Seamless editing of code, prose, documentation, and structured content
+
+## Requirements
+
+- Rust (Minimum supported version: 1.70.0)
+- GNU/Linux or other free operating system
+- Standard system libraries
+
+**Note**: Odo is developed exclusively for free operating systems. It is not officially tested or supported on proprietary platforms.
 
 ## License
 

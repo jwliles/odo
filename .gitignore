@@ -87,3 +87,5 @@ coverage/
 
 # Generated test files
 /tests/generated/
+
+context/

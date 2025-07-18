@@ -1,13 +1,13 @@
 [package]
-name = "NeoOrg"
+name = "odo"
 version = "0.2.0"
 edition = "2024"
-description = "A standalone Org-mode editor written in Rust, inspired by both Vim and Emacs"
-authors = ["NeoOrg Contributors"]
+description = "A versatile text editor with first-class Org support, designed for code, prose, and any content"
+authors = ["Odo Contributors"]
 license = "MIT"
-repository = "https://github.com/jwliles/NeoOrg"
+repository = "https://github.com/jwliles/Odo"
 readme = "README.md"
-keywords = ["org-mode", "emacs", "vim", "outliner", "terminal"]
+keywords = ["text-editor", "org-mode", "editor", "rust", "versatile"]
 categories = ["text-editors", "command-line-utilities"]
 
 [dependencies]
@@ -15,6 +15,10 @@ crossterm = "0.28.1"
 termion = "4.0.5"
 unicode-segmentation = "1.12.0"
 tree-sitter = "0.20.10"
+egui = "0.25.0"
+eframe = "0.25.0"
+rfd = "0.13.0"
+regex = "1.10.3"
 
 [build-dependencies]
 cc = "1.0.83"
