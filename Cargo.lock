@@ -1867,21 +1867,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "neo_org"
-version = "0.2.0"
-dependencies = [
- "cc",
- "crossterm",
- "eframe",
- "egui",
- "regex",
- "rfd",
- "termion",
- "tree-sitter",
- "unicode-segmentation",
-]
-
-[[package]]
 name = "nix"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2083,6 +2068,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c92d4ddb4bd7b50d730c215ff871754d0da6b2178849f8a2a2ab69712d0c073b"
 dependencies = [
  "objc",
+]
+
+[[package]]
+name = "odo"
+version = "0.2.0"
+dependencies = [
+ "cc",
+ "crossterm",
+ "eframe",
+ "egui",
+ "regex",
+ "rfd",
+ "termion",
+ "tree-sitter",
+ "unicode-segmentation",
 ]
 
 [[package]]
